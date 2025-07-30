@@ -54,15 +54,15 @@ const SearchBar = ({ snippets, onFilter }) => {
 
   const handleClear = () => {
     setInput("");
-    onFilter(snippets); // Reset to original
+    onFilter(snippets);
   };
 
   return (
-    <div className="relative w-full sm:max-w-sm transition-all">
+    <div className="relative w-full sm:max-w-sm">
       <input
         type="text"
-        placeholder="🔍 Search: lang:js #api useEffect"
-        className="input input-bordered w-full pl-10 pr-10 transition-all duration-200 focus:outline-none focus:ring focus:ring-primary"
+        placeholder="Search: lang:js #api useEffect"
+        className="input input-bordered w-full pl-5 pr-10 focus:outline-none rounded-full"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -71,7 +71,7 @@ const SearchBar = ({ snippets, onFilter }) => {
       {/* Search Icon */}
       <button
         onClick={handleSearch}
-        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-primary"
+        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-primary"
       >
         <Search size={18} />
       </button>
@@ -80,7 +80,7 @@ const SearchBar = ({ snippets, onFilter }) => {
       {input && (
         <button
           onClick={handleClear}
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
+          className="absolute right-10 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
         >
           <XCircle size={18} />
         </button>

@@ -1,20 +1,24 @@
 import { useContext } from "react";
-import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext.js";
+import { useLocation, useNavigate } from "react-router-dom";
+import { AuthContext } from "@/context/AuthContext";
 
 export const useAuth = () => {
   const navigate = useNavigate();
-  const { admin, login: contextLogin, logout: contextLogout } = useContext(AuthContext);
+  const location = useLocation();
+  const { admin, bootstrapped, login: ctxLogin, logout: ctxLogout } = useContext(AuthContext);
 
-  const login = (email, token) => {
-    contextLogin(email, token);
-    navigate("/dashboard", { replace: true });
+  const login = async (email, token) => {
+    await Promise.resolve(ctxLogin?.(email, token));
+    try { sessionStorage.removeItem("preAuthOK"); } catch {}
+    const to = location.state?.from?.pathname || "/dashboard";
+    navigate(to, { replace: true });
   };
 
-  const logout = () => {
-    contextLogout();
-    navigate("/admin", { replace: true });
+  const logout = async () => {
+    await Promise.resolve(ctxLogout?.());
+    try { sessionStorage.removeItem("preAuthOK"); } catch {}
+    navigate("/admin-login", { replace: true });
   };
 
-  return { admin, login, logout };
+  return { admin, bootstrapped, login, logout };
 };

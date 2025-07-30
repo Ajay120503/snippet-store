@@ -10,7 +10,7 @@ import { createPortal } from "react-dom";
 import { updateSnippet, deleteSnippet } from "../services/api.js";
 import toast from "react-hot-toast";
 
-const TAG_COLORS = [ "badge-primary", "badge-secondary", "badge-accent", "badge-info", "badge-success", "badge-warning", "badge-error" ];
+const TAG_COLORS = ["badge-primary", "badge-secondary", "badge-accent", "badge-info", "badge-success", "badge-warning", "badge-error"];
 
 const LANGUAGE_ICONS = {
   javascript: "devicon-javascript-plain", python: "devicon-python-plain", html: "devicon-html5-plain",
@@ -20,6 +20,20 @@ const LANGUAGE_ICONS = {
   php: "devicon-php-plain", bash: "devicon-bash-plain",
   go: "devicon-go-plain", ruby: "devicon-ruby-plain"
 };
+
+// CHANGE: helper to mask email/full name to initials
+// const getInitials = (s) => {
+//   if (!s || typeof s !== "string") return "A";
+//   let name = s;
+//   if (s.includes("@")) {
+//     name = s.split("@")[0]; // take local part
+//   }
+//   // split by non-letters and take first two tokens
+//   const parts = name.replace(/[^a-zA-Z]+/g, " ").trim().split(" ").filter(Boolean);
+//   const a = parts[0]?.[0] || name[0];
+//   const b = parts[1]?.[0] || "";
+//   return (a + b).toUpperCase();
+// };
 
 const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) => {
   const [showDescription, setShowDescription] = useState(false);
@@ -41,9 +55,10 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
   }, []);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(formData.code);
+    navigator.clipboard.writeText(formData.code || "");
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    toast.success("Code copied"); // CHANGE: avoid inline text that shifts layout
+    setTimeout(() => setCopied(false), 1500);
   };
 
   const handleChange = (field, value) => {
@@ -51,7 +66,7 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
   };
 
   const handleTagChange = (idx, value) => {
-    const updatedTags = [...formData.tags];
+    const updatedTags = [...(formData.tags || [])];
     updatedTags[idx] = value;
     handleChange("tags", updatedTags);
   };
@@ -84,34 +99,79 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
     }
   };
 
+  // Get initials from a name or email
+  const getInitials = (s) => {
+    if (!s || typeof s !== "string") return "A";
+    let name = s.includes("@") ? s.split("@")[0] : s;
+    const parts = name.replace(/[^a-zA-Z]+/g, " ").trim().split(" ").filter(Boolean);
+    const a = parts[0]?.[0] || name[0];
+    const b = parts[1]?.[0] || "";
+    return (a + b).toUpperCase();
+  };
+
+  // (Optional) Mask an email like j***@g***.com
+  const maskEmail = (email) => {
+    if (!email || typeof email !== "string" || !email.includes("@")) return email || "";
+    const [local, domainFull] = email.split("@");
+    const [domain, ...rest] = domainFull.split(".");
+    const tld = rest.length ? rest.join(".") : "";
+    const safeLocal = local ? `${local[0]}***` : "***";
+    const safeDomain = domain ? `${domain[0]}***` : "***";
+    return tld ? `${safeLocal}@${safeDomain}.${tld}` : `${safeLocal}@${safeDomain}`;
+  };
+
+  // CHANGE: derived display values
+  const createdAtSafe = formData?.createdAt ? new Date(formData.createdAt) : null;
+  const initials = getInitials(formData?.createdBy);
+
   return (
-    <div className="relative bg-base-100 shadow-md rounded-2xl border border-base-200 p-5 space-y-4 transition-all">
+    <div
+      className={[
+        "relative p-5 space-y-4 transition-all",
+        // CHANGE: glassy + pro look
+        "bg-base-100/60 backdrop-blur-xl border border-base-200/60",
+        "rounded-2xl shadow-lg ring-1 ring-base-300/40",
+        "hover:shadow-xl hover:-translate-y-0.5"
+      ].join(" ")}
+    >
+      {/* language badge */}
       <div className="absolute top-3 right-4 flex items-center gap-2">
-        {LANGUAGE_ICONS[formData.language?.toLowerCase()] ? (
-          <i className={`${LANGUAGE_ICONS[formData.language.toLowerCase()]} text-2xl`} title={formData.language}></i>
+        {LANGUAGE_ICONS[formData.language?.toLowerCase?.()] ? (
+          <i
+            className={`${LANGUAGE_ICONS[formData.language.toLowerCase()]} text-2xl opacity-80`}
+            title={formData.language}
+          />
         ) : (
-          <span className="badge badge-neutral text-xs">{formData.language}</span>
+          <span className="badge badge-neutral text-xs">{formData.language || "text"}</span>
         )}
       </div>
 
-      {/* Title */}
+      {/* Title + actions */}
       <div className="flex justify-between items-start gap-3 pt-6">
         {editing ? (
           <input
             type="text"
             className="w-full bg-transparent text-lg font-medium px-2 py-1 border-b border-base-300 focus:outline-none focus:border-primary"
-            value={formData.title}
+            value={formData.title || ""}
             onChange={(e) => handleChange("title", e.target.value)}
           />
         ) : (
-          <h2 className="text-xl font-semibold">{formData.title}</h2>
+          <h2 className="text-xl font-semibold leading-7">{formData.title}</h2>
         )}
         {isAdmin && isDashboard && (
           <div className="flex gap-2">
-            <button onClick={() => setEditing(!editing)} className="btn btn-xs btn-circle btn-ghost">
-              <Pencil size={14} />
+            <button
+              onClick={() => setEditing(!editing)}
+              className="btn btn-xs btn-circle btn-ghost"
+              aria-label={editing ? "Stop editing" : "Edit snippet"}
+            >
+              {editing ? <X size={14} /> : <Pencil size={14} />}
             </button>
-            <button onClick={handleDelete} className="btn btn-xs btn-ghost btn-circle text-error">
+            <button
+              onClick={handleDelete}
+              className="btn btn-xs btn-ghost btn-circle text-error"
+              aria-label="Delete snippet"
+            >
               <Trash2 size={14} />
             </button>
           </div>
@@ -120,117 +180,162 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
 
       {/* Tags */}
       <div className="flex flex-wrap gap-2">
-        {formData.tags?.map((tag, idx) =>
+        {(formData.tags || []).map((tag, idx) =>
           editing ? (
             <input
               key={idx}
               value={tag}
               onChange={(e) => handleTagChange(idx, e.target.value)}
-              className="bg-base-200 px-2 py-1 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              className="bg-base-200/70 px-2 py-1 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary"
               style={{ minWidth: "60px" }}
             />
           ) : (
-            <span key={idx} className={`badge text-sm ${TAG_COLORS[idx % TAG_COLORS.length]}`}>
-              <HashIcon className="py-1" />
+            <span key={idx} className={`badge text-sm ${TAG_COLORS[idx % TAG_COLORS.length]} items-center gap-1`}>
+              <HashIcon size={12} />
               {tag}
             </span>
           )
         )}
       </div>
 
-      {/* Code */}
+      {/* Code with sticky toolbar */}
       {editing ? (
         <textarea
-          className="w-full bg-base-200 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full bg-base-200/70 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
           rows={6}
-          value={formData.code}
+          value={formData.code || ""}
           onChange={(e) => handleChange("code", e.target.value)}
         />
       ) : (
-        <div className="relative rounded-lg overflow-auto max-h-64 text-sm bg-base-200">
-          <SyntaxHighlighter
-            language={formData.language}
-            style={oneDark}
-            showLineNumbers
-            wrapLines
-            wrapLongLines
-            customStyle={{ backgroundColor: "transparent", padding: "0.5rem", margin: 0 }}
-          >
-            {formData.code}
-          </SyntaxHighlighter>
-          <div className="absolute top-2 right-2 flex gap-2">
-            <button className="btn btn-xs btn-circle btn-outline" onClick={handleCopy}>
-              <ClipboardCopy size={14} />
-              {copied && <span className="ml-1 text-xs">Copied!</span>}
-            </button>
-            <button className="btn btn-xs btn-circle btn-outline" onClick={() => setShowModal(true)}>
-              <Eye size={14} />
-            </button>
+        <div
+          className={[
+            "relative rounded-lg ring-1 ring-base-300/50 overflow-hidden",
+            "bg-base-200/50 backdrop-blur-md"
+          ].join(" ")}
+        >
+          {/* scroll area */}
+          <div className="max-h-64 overflow-auto">
+            {/* CHANGE: sticky toolbar that stays while scrolling */}
+            <div
+              className={[
+                "sticky top-0 z-10 flex justify-end gap-2 p-2",
+                "bg-base-100/60 backdrop-blur-md", // glassy bar
+                "border-b border-base-300/50",
+                "pointer-events-none" // so scroll works through; buttons re-enable events
+              ].join(" ")}
+            >
+              <button
+                className="btn btn-xs btn-circle btn-outline pointer-events-auto"
+                onClick={handleCopy}
+                aria-label="Copy code"
+                title={copied ? "Copied!" : "Copy"}
+              >
+                <ClipboardCopy size={14} />
+              </button>
+              <button
+                className="btn btn-xs btn-circle btn-outline pointer-events-auto"
+                onClick={() => setShowModal(true)}
+                aria-label="Open preview"
+                title="Preview"
+              >
+                <Eye size={14} />
+              </button>
+            </div>
+
+            {/* code */}
+            <SyntaxHighlighter
+              language={formData.language || "text"}
+              style={oneDark}
+              showLineNumbers
+              wrapLines
+              wrapLongLines
+              customStyle={{ backgroundColor: "transparent", padding: "0.75rem", margin: 0 }}
+            >
+              {formData.code || ""}
+            </SyntaxHighlighter>
           </div>
         </div>
       )}
 
-      {/* Description */}
-      <div className="relative z-10" ref={dropdownRef}>
+      {/* Description (height-limited so other cards don't jump) */}
+      <div className="relative" ref={dropdownRef}>
         <button
-          onClick={() => setShowDescription(!showDescription)}
-          className="flex items-center gap-1 text-sm text-primary font-medium mt-2 hover:underline"
+          onClick={() => setShowDescription((v) => !v)}
+          className="flex items-center gap-1 text-sm text-primary font-medium mt-1 hover:underline"
         >
           Description {showDescription ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
+
         {showDescription && (
           <>
             {editing ? (
               <textarea
-                className="mt-2 w-full bg-base-200 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                value={formData.description}
+                className="mt-2 w-full bg-base-200/70 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                value={formData.description || ""}
                 onChange={(e) => handleChange("description", e.target.value)}
               />
             ) : (
-              <div className="mt-2 p-3 rounded-md bg-base-200 text-sm">
-                {formData.description}
+              // CHANGE: cap height + internal scroll so the card height barely changes
+              <div className="mt-2 p-3 rounded-md bg-base-200/60 text-sm max-h-28 overflow-y-auto">
+                {formData.description || "—"}
               </div>
             )}
           </>
         )}
       </div>
 
-      {/* Save / Cancel Buttons */}
+      {/* Save / Cancel */}
       {editing && (
-        <div className="flex justify-end gap-2 mt-4">
-          <button className="btn btn-xs btn-success btn-circle" onClick={handleSave}>
+        <div className="flex justify-end gap-2 mt-2">
+          <button className="btn btn-xs btn-success btn-circle" onClick={handleSave} aria-label="Save">
             <Save size={14} />
           </button>
-          <button className="btn btn-xs btn-ghost btn-circle" onClick={handleCancel}>
+          <button className="btn btn-xs btn-ghost btn-circle" onClick={handleCancel} aria-label="Cancel">
             <X size={14} />
           </button>
         </div>
       )}
 
+      {/* Footer (initials only, no full email) */}
       {/* Footer */}
-      <div className="flex justify-between text-xs text-gray-500 mt-2">
-        <p>Posted by: {formData.createdBy || "Anonymous"}</p>
+      <div className="flex items-center justify-between text-xs text-base-content/60 mt-2">
+        <div className="flex items-center gap-2">
+          {/* Small avatar circle with initials */}
+          <div className="h-6 w-6 rounded-full bg-primary/15 text-primary grid place-items-center text-[10px] font-semibold">
+            {initials}
+          </div>
+          <p className="font-medium">
+            {/* Posted by: {initials} */}
+            {/* Or show masked email instead of initials: */}
+            Posted by: {maskEmail(formData?.createdBy)}
+          </p>
+        </div>
         <p>{format(new Date(formData.createdAt), "dd MMM yyyy, hh:mm a")}</p>
       </div>
 
-      {/* Modal */}
+
+      {/* Modal (glassy backdrop) */}
       {showModal &&
         createPortal(
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-            <div className="bg-base-100 rounded-xl shadow-xl w-11/12 max-w-3xl p-4 relative">
-              <button className="absolute top-3 right-3 btn btn-sm btn-circle" onClick={() => setShowModal(false)}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="bg-base-100/80 backdrop-blur-xl rounded-xl shadow-2xl w-11/12 max-w-3xl p-4 relative ring-1 ring-base-300/50">
+              <button
+                className="absolute top-3 right-3 btn btn-sm btn-circle"
+                onClick={() => setShowModal(false)}
+                aria-label="Close preview"
+              >
                 ✕
               </button>
-              <div className="overflow-auto max-h-[80vh]">
+              <div className="overflow-auto max-h-[80vh] rounded-lg ring-1 ring-base-300/50 bg-base-200/50">
                 <SyntaxHighlighter
-                  language={formData.language}
+                  language={formData.language || "text"}
                   style={oneDark}
                   showLineNumbers
                   wrapLines
                   wrapLongLines
-                  customStyle={{ background: "transparent", color: "inherit", padding: "1rem" }}
+                  customStyle={{ background: "transparent", color: "inherit", padding: "1rem", margin: 0 }}
                 >
-                  {formData.code}
+                  {formData.code || ""}
                 </SyntaxHighlighter>
               </div>
             </div>

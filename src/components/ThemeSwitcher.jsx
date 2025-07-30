@@ -3,7 +3,9 @@ import { Sun, Moon } from "lucide-react";
 
 const ThemeSwitcher = () => {
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem("theme") || "light";
+    // read once on mount
+    if (typeof window === "undefined") return "dim";
+    return localStorage.getItem("theme") || "dim";
   });
 
   useEffect(() => {
@@ -11,18 +13,27 @@ const ThemeSwitcher = () => {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
-  };
+  const toggleTheme = () => setTheme((t) => (t === "dim" ? "synthwave" : "dim"));
+  const isDark = theme === "synthwave";
 
   return (
-    <button
-      className="btn btn-ghost btn-circle text-xl btn-sm"
-      onClick={toggleTheme}
-      aria-label="Toggle Theme"
+    <label
+      className="swap swap-rotate btn btn-ghost btn-circle btn-sm"
+      aria-label="Toggle theme"
+      title={`Switch to ${isDark ? "dim" : "synthwave"} theme`}
     >
-      {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
-    </button>
+      {/* DaisyUI swap uses a hidden checkbox to control which icon shows */}
+      <input
+        type="checkbox"
+        checked={isDark}
+        onChange={toggleTheme}
+        aria-hidden="true"
+      />
+
+      {/* When checked -> show .swap-on; when unchecked -> show .swap-off */}
+      <Sun size={18} className="swap-on" />   {/* shown in dark mode (to switch back to light) */}
+      <Moon size={18} className="swap-off" /> {/* shown in light mode (to switch to dark) */}
+    </label>
   );
 };
 

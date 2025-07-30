@@ -1,47 +1,53 @@
-import { useState, useEffect } from "react";
-import Cookies from "js-cookie";
+// src/context/AuthProvider.jsx
+import { useEffect, useMemo, useState } from "react";
 import { AuthContext } from "./AuthContext";
 import { fetchAdmin, logoutAdmin } from "../services/api";
 
+const TOKEN_KEY = "token";
+
 export const AuthProvider = ({ children }) => {
   const [admin, setAdmin] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [bootstrapped, setBootstrapped] = useState(false);
 
   useEffect(() => {
     const init = async () => {
       try {
-        const data = await fetchAdmin();
-        setAdmin({ email: data.email });
-      } catch (err) {
+        // Axios interceptor will add Authorization from localStorage token
+        const data = await fetchAdmin();      // <-- your server returns { email: "..." }
+        if (data?.email) setAdmin({ email: data.email });
+        else setAdmin(null);
+      } catch {
+        try { localStorage.removeItem(TOKEN_KEY); } catch {}
         setAdmin(null);
-        Cookies.remove("token");
       } finally {
-        setLoading(false);
+        setBootstrapped(true);                // <-- important so guards wait
       }
     };
-
     init();
   }, []);
 
-  const login = (email, token) => {
-    setAdmin({ email });
-    Cookies.set("token", token, { expires: 1 });
-  };
-
-  const logout = async () => {
+  const login = async (email, token) => {
+    if (token) {
+      try { localStorage.setItem(TOKEN_KEY, token); } catch {}
+    }
     try {
-      await logoutAdmin();
-    } catch (err) {
-      console.error("Logout failed:", err);
-    } finally {
-      setAdmin(null);
-      Cookies.remove("token");
+      const data = await fetchAdmin();       // expect { email }
+      setAdmin(data?.email ? { email: data.email } : { email });
+    } catch {
+      setAdmin({ email });
     }
   };
 
-  return (
-    <AuthContext.Provider value={{ admin, login, logout, loading }}>
-      {children}
-    </AuthContext.Provider>
+  const logout = async () => {
+    try { await logoutAdmin(); } catch {}
+    try { localStorage.removeItem(TOKEN_KEY); } catch {}
+    setAdmin(null);
+  };
+
+  const value = useMemo(
+    () => ({ admin, bootstrapped, login, logout }),
+    [admin, bootstrapped]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

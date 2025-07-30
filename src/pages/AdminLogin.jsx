@@ -20,12 +20,10 @@ const AdminLogin = () => {
   const otpInputRef = useRef(null);
   const emailInputRef = useRef(null);
 
-  // HARD GUARD: must pass step-1
+  // HARD GUARD: must pass step-1 (username/password page should set this)
   useEffect(() => {
     const preAuthOK = sessionStorage.getItem("preAuthOK") === "true";
-    if (!preAuthOK) {
-      navigate("/admin-login", { replace: true });
-    }
+    if (!preAuthOK) navigate("/admin-login", { replace: true });
   }, [navigate]);
 
   // If already logged in, skip to dashboard
@@ -35,10 +33,7 @@ const AdminLogin = () => {
   }, [navigate]);
 
   useEffect(() => {
-    // autofocus email initially
-    if (step === 1) {
-      emailInputRef.current?.focus();
-    }
+    if (step === 1) emailInputRef.current?.focus();
   }, [step]);
 
   const isValidEmail = useCallback(
@@ -67,20 +62,19 @@ const AdminLogin = () => {
   }, []);
 
   const handleRequestOtp = async () => {
-    if (!email.trim()) return toast.error("Email is required.");
-    if (!isValidEmail(email)) return toast.error("Invalid email format.");
+    const emailLc = email.trim().toLowerCase();
+    if (!emailLc) return toast.error("Email is required.");
+    if (!isValidEmail(emailLc)) return toast.error("Invalid email format.");
+    setEmail(emailLc);
 
     setLoading(true);
     try {
-      await sendOtp(email);
+      await sendOtp(emailLc);
       setStep(2);
       setOtp("");
       startResendCountdown();
       toast.success("OTP sent to your email.");
-      // Slight delay then focus OTP input if present
-      setTimeout(() => {
-        otpInputRef.current?.focus?.();
-      }, 150);
+      setTimeout(() => otpInputRef.current?.focus?.(), 150);
     } catch {
       toast.error("Failed to send OTP. Try again.");
     } finally {
@@ -89,15 +83,29 @@ const AdminLogin = () => {
   };
 
   const handleVerifyOtp = async () => {
-    if (!otp.trim()) return toast.error("OTP is required.");
     if (!/^\d{6}$/.test(otp)) return toast.error("OTP must be 6 digits.");
-
     setLoading(true);
     try {
-      const { token } = await verifyOtp(email, otp);
+      const emailLc = email.trim().toLowerCase();
+
+      const res = await verifyOtp(emailLc, otp);
+      const token = res?.token;
+
+      // ✅ Save token for the Axios interceptor (header mode)
+      if (token) {
+        localStorage.setItem("token", token);
+      } else if (!res?.ok) {
+        // If you didn't enable cookie mode, token must be present
+        throw new Error("Token missing from server response");
+      }
+
+      // Clear step‑1 flag now that we’re fully authenticated
       sessionStorage.removeItem("preAuthOK");
-      login(email, token);
+
+      await login(emailLc, token);
       toast.success("🎉 Login successful!");
+
+      // If useAuth.login doesn't navigate, keep this line:
       navigate("/dashboard", { replace: true });
     } catch {
       toast.error("Invalid OTP or email.");
@@ -115,10 +123,7 @@ const AdminLogin = () => {
 
   const handleResend = async () => {
     if (resendLeft > 0 || loading) return;
-    if (!isValidEmail(email)) {
-      toast.error("Enter a valid email first.");
-      return;
-    }
+    if (!isValidEmail(email)) return toast.error("Enter a valid email first.");
     setLoading(true);
     try {
       await sendOtp(email);
@@ -161,10 +166,10 @@ const AdminLogin = () => {
           {/* OTP */}
           {step === 2 && (
             <>
-              {/* If you have OTPInput component, use it here (uncomment import) */}
+              {/* If you have OTPInput component, use it */}
               {/* <OTPInput otp={otp} setOtp={setOtp} length={6} /> */}
 
-              {/* Fallback single input (kept by default) */}
+              {/* Fallback single input */}
               <input
                 ref={otpInputRef}
                 type="text"
