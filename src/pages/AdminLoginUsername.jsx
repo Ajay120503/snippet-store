@@ -73,9 +73,6 @@ const AdminLoginUsername = () => {
       <div className="w-full max-w-sm p-6 bg-base-100 rounded-2xl shadow-xl">
         <div className="text-center mb-6">
           <h2 className="text-3xl font-extrabold tracking-tight">Admin Login</h2>
-          <p className="text-sm text-base-content/60 mt-1">
-            Step 1 — Username &amp; Password
-          </p>
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -124,19 +121,19 @@ const AdminLoginUsername = () => {
                 disabled={loading}
                 aria-label="Admin password"
               />
-              <Lock
-                className="absolute right-10 top-1/2 -translate-y-1/2 opacity-40"
-                size={18}
-              />
-              <button
-                type="button"
-                className="btn btn-ghost btn-xs px-2 absolute right-0 top-1/2 -translate-y-1/2"
-                onClick={() => setShowPass((s) => !s)}
-                tabIndex={-1}
-                aria-label={showPass ? "Hide password" : "Show password"}
-              >
-                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+              <div className="absolute top-2 right-2 flex items-center gap-1 pr-1 pt-1">
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-circle btn-xs"
+                  onClick={() => setShowPass((s) => !s)}
+                  tabIndex={-1}
+                  aria-label={showPass ? "Hide password" : "Show password"}
+                >
+                  {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+                <Lock className="opacity-40" size={18} />
+              </div>
+
             </div>
           </label>
 
@@ -153,15 +150,11 @@ const AdminLoginUsername = () => {
           </button>
         </form>
 
+        <div className="divider my-5"></div>
         <p className="text-xs text-center text-base-content/50 mt-4">
           You’ll be asked for email OTP in the next step.
         </p>
 
-        <div className="divider my-5"></div>
-
-        <div className="text-center text-xs text-base-content/60">
-          For development only. Do not ship real secrets in client code.
-        </div>
       </div>
     </div>
   );

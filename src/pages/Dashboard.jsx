@@ -66,13 +66,13 @@ const Dashboard = () => {
       {/* Header */}
       <div className="flex flex-wrap justify-between items-center gap-4">
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
-          📚 Snippet Dashboard
+          Dashboard
         </h1>
         <button
           className="btn btn-sm btn-outline"
           onClick={() => setShowAddModal(true)}
         >
-        Add Snippet
+          Add Snippet
         </button>
       </div>
 
@@ -90,17 +90,15 @@ const Dashboard = () => {
           <label className="text-sm text-gray-600">View:</label>
           <div className="flex gap-1">
             <button
-              className={`btn btn-xs sm:btn-sm btn-circle ${
-                view === "grid" ? "btn-primary" : "btn-ghost"
-              }`}
+              className={`btn btn-xs sm:btn-sm btn-circle ${view === "grid" ? "btn-primary" : "btn-ghost"
+                }`}
               onClick={() => setView("grid")}
             >
               <Grid2X2Check size={16} />
             </button>
             <button
-              className={`btn btn-xs sm:btn-sm btn-circle ${
-                view === "list" ? "btn-primary" : "btn-ghost"
-              }`}
+              className={`btn btn-xs sm:btn-sm btn-circle ${view === "list" ? "btn-primary" : "btn-ghost"
+                }`}
               onClick={() => setView("list")}
             >
               <ExpandIcon size={16} />
@@ -140,9 +138,8 @@ const Dashboard = () => {
             <button
               key={i}
               onClick={() => setPage(i + 1)}
-              className={`join-item btn btn-sm ${
-                page === i + 1 ? "btn-primary" : "btn-outline"
-              }`}
+              className={`join-item btn btn-sm ${page === i + 1 ? "btn-primary" : "btn-outline"
+                }`}
             >
               {i + 1}
             </button>

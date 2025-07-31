@@ -295,7 +295,6 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
         </div>
       )}
 
-      {/* Footer (initials only, no full email) */}
       {/* Footer */}
       <div className="flex items-center justify-between text-xs text-base-content/60 mt-2">
         <div className="flex items-center gap-2">

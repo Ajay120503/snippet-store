@@ -138,14 +138,14 @@ const AdminLogin = () => {
 
   return (
     <div className="min-h-dvh flex items-center justify-center px-4">
-      <div className="w-full max-w-sm p-6 bg-base-100 rounded-2xl shadow-2xl space-y-6">
+      <div className="w-full border border-primary/5 max-w-sm p-6 bg-base-100 rounded-2xl shadow-2xl space-y-6">
         <div className="text-center">
           <h2 className="text-3xl font-bold mb-1">
             {step === 1 ? "Email Verification" : "Enter OTP"}
           </h2>
           <p className="text-sm text-base-content/60">
             {step === 1
-              ? "Step 2 — Enter your admin email to receive an OTP"
+              ? "Enter your admin email to receive an OTP"
               : `We sent a 6-digit code to ${email}`}
           </p>
         </div>
