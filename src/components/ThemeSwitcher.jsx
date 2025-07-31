@@ -4,8 +4,8 @@ import { Sun, Moon } from "lucide-react";
 const ThemeSwitcher = () => {
   const [theme, setTheme] = useState(() => {
     // read once on mount
-    if (typeof window === "undefined") return "dim";
-    return localStorage.getItem("theme") || "dim";
+    if (typeof window === "undefined") return "synthwave";
+    return localStorage.getItem("theme") || "synthwave";
   });
 
   useEffect(() => {
@@ -13,14 +13,14 @@ const ThemeSwitcher = () => {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const toggleTheme = () => setTheme((t) => (t === "dim" ? "synthwave" : "dim"));
-  const isDark = theme === "synthwave";
+  const toggleTheme = () => setTheme((t) => (t === "synthwave" ? "black" : "synthwave"));
+  const isDark = theme === "black";
 
   return (
     <label
       className="swap swap-rotate btn btn-ghost btn-circle btn-sm"
       aria-label="Toggle theme"
-      title={`Switch to ${isDark ? "dim" : "synthwave"} theme`}
+      title={`Switch to ${isDark ? "synthwave" : "black"} theme`}
     >
       {/* DaisyUI swap uses a hidden checkbox to control which icon shows */}
       <input

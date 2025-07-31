@@ -128,8 +128,7 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
     <div
       className={[
         "relative p-5 space-y-4 transition-all",
-        // CHANGE: glassy + pro look
-        "bg-base-100/60 backdrop-blur-xl border border-base-200/60",
+        "bg-base-200 backdrop-blur-xl border border-base-content/5",
         "rounded-2xl shadow-lg ring-1 ring-base-300/40",
         "hover:shadow-xl hover:-translate-y-0.5"
       ].join(" ")}
@@ -209,7 +208,7 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
       ) : (
         <div
           className={[
-            "relative rounded-lg ring-1 ring-base-300/50 overflow-hidden",
+            "relative overflow-hidden",
             "bg-base-200/50 backdrop-blur-md"
           ].join(" ")}
         >
@@ -219,9 +218,9 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
             <div
               className={[
                 "sticky top-0 z-10 flex justify-end gap-2 p-2",
-                "bg-base-100/60 backdrop-blur-md", // glassy bar
-                "border-b border-base-300/50",
-                "pointer-events-none" // so scroll works through; buttons re-enable events
+                "bg-base-200",
+                "border-none",
+                "pointer-events-none"
               ].join(" ")}
             >
               <button

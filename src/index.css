@@ -2,19 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
-*{
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* Reset */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+/* ---- Theme variables (DaisyUI aware) ---- */
+:root {
+  --scrollbar-track: hsl(var(--b2));
+  --scrollbar-thumb: hsl(var(--bc) / 0.35);
+  --scrollbar-thumb-hover: hsl(var(--bc) / 0.55);
+}
+[data-theme="dark"] {
+  --scrollbar-track: hsl(var(--b1));
+  --scrollbar-thumb: hsl(var(--bc) / 0.5);
+  --scrollbar-thumb-hover: hsl(var(--bc) / 0.6);
 }
 
-.custom-scroll-hide::-webkit-scrollbar {
-  display: none;
-  height: 0;
-  width: 0;
+/* =========================
+   GLOBAL THIN SCROLLBARS
+   ========================= */
+
+/* Firefox — apply to all elements */
+ /* *{
+  scrollbar-width: thin; 
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track); 
+} */
+
+/* WebKit (Chrome/Edge/Safari/Opera) — apply to all elements */
+::-webkit-scrollbar {
+  width: 1px;            /* vertical thickness */
+  height: 1px;           /* horizontal thickness */
 }
-.custom-scroll-hide {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE 10+ */
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+  /* keep visual thickness ~2px without adding a real border */
+  box-shadow: inset 0 0 0 1px var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
 }
 
+/* =========================================================
+   OPTIONAL: GLOBAL AUTO-HIDE (uncomment to enable)
+   Hides bars until the scroll container is hovered.
+   ========================================================= */
+
+/* WebKit: hide by default */
+::-webkit-scrollbar { width: 0; height: 0; }
+*:hover::-webkit-scrollbar { width: 6px; height: 6px; } /* or 2px if you prefer */
+
+/* Firefox: hide by default, show thin on hover */
+* { scrollbar-width: none; }
+*:hover { scrollbar-width: thin; }

@@ -18,7 +18,7 @@ const Navbar = () => {
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-base-100 shadow-sm border-b border-base-200">
+    <div className="fixed top-0 left-0 right-0 z-50 bg-base-300 shadow-sm border-b border-base-200">
       <div className="navbar max-w-7xl mx-auto px-4 py-2 flex justify-between items-center">
         {/* Left: Logo */}
         <Link to="/" className="flex items-center gap-2">

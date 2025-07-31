@@ -62,7 +62,7 @@ const Dashboard = () => {
   );
 
   return (
-    <div className="container mx-auto px-4 py-24 space-y-6">
+    <div className="container mx-auto px-4 py-24 space-y-6 thin-scrollbar auto-hide-scrollbar">
       {/* Header */}
       <div className="flex flex-wrap justify-between items-center gap-4">
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
