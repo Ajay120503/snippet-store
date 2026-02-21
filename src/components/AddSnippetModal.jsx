@@ -147,7 +147,7 @@ const AddSnippetModal = ({ onClose, onSuccess }) => {
                     className="text-error font-bold"
                     onClick={() => handleRemoveTag(idx)}
                   >
-                    <X fontSize={6} />
+                    <X />
                   </button>
                 </div>
               ))}
@@ -156,7 +156,7 @@ const AddSnippetModal = ({ onClose, onSuccess }) => {
                 className="btn btn-sm btn-outline gap-2"
                 onClick={handleAddTag}
               >
-                <Plus fontSize={10} /> Tag
+                <Plus /> Tag
               </button>
             </div>
           </div>
