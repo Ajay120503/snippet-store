@@ -68,7 +68,7 @@ const AddSnippetModal = ({ onClose, onSuccess }) => {
     "
       >
         {/* ================= HEADER ================= */}
-        <div className="flex items-center justify-between px-6 py-4bg-base-300 sticky top-0 z-10">
+        <div className="flex items-center justify-between px-6 py-4 bg-base-300 sticky top-0 z-10">
           <h2 className="text-xl font-semibold flex items-center gap-2">
             Add New Snippet
           </h2>
