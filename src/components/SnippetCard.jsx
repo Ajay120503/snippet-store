@@ -300,7 +300,11 @@ const SnippetCard = ({
             </div>
 
             {/* code */}
-            <Suspense fallback={<div className="p-4">Loading preview...</div>}>
+            <Suspense
+              fallback={
+                <div className="p-4 text-center">Loading preview...</div>
+              }
+            >
               <SyntaxHighlighter
                 language={formData.language || "text"}
                 style={oneDark}
@@ -404,7 +408,9 @@ const SnippetCard = ({
               </button>
               <div className="overflow-auto max-h-[80vh] rounded-lg ring-1 ring-base-300/50 bg-base-200/50">
                 <Suspense
-                  fallback={<div className="p-4">Loading preview...</div>}
+                  fallback={
+                    <div className="p-4 text-center">Loading preview...</div>
+                  }
                 >
                   <SyntaxHighlighter
                     language={formData.language || "text"}
