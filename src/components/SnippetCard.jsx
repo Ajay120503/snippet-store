@@ -1,41 +1,54 @@
-import { useState, useRef, useEffect } from "react";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import {
-  ChevronDown, ChevronUp, ClipboardCopy, Eye, HashIcon,
-  Pencil, Save, X, Trash2
+  ChevronDown,
+  ChevronUp,
+  ClipboardCopy,
+  Eye,
+  HashIcon,
+  Pencil,
+  Save,
+  X,
+  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { createPortal } from "react-dom";
 import { updateSnippet, deleteSnippet } from "../services/api.js";
 import toast from "react-hot-toast";
 
-const TAG_COLORS = ["badge-primary", "badge-secondary", "badge-accent", "badge-info", "badge-success", "badge-warning", "badge-error"];
+const TAG_COLORS = [
+  "badge-primary",
+  "badge-secondary",
+  "badge-accent",
+  "badge-info",
+  "badge-success",
+  "badge-warning",
+  "badge-error",
+];
 
 const LANGUAGE_ICONS = {
-  javascript: "devicon-javascript-plain", python: "devicon-python-plain", html: "devicon-html5-plain",
-  css: "devicon-css3-plain", java: "devicon-java-plain", c: "devicon-c-plain",
-  cpp: "devicon-cplusplus-plain", typescript: "devicon-typescript-plain",
-  nodejs: "devicon-nodejs-plain", react: "devicon-react-original",
-  php: "devicon-php-plain", bash: "devicon-bash-plain",
-  go: "devicon-go-plain", ruby: "devicon-ruby-plain"
+  javascript: "devicon-javascript-plain",
+  python: "devicon-python-plain",
+  html: "devicon-html5-plain",
+  css: "devicon-css3-plain",
+  java: "devicon-java-plain",
+  c: "devicon-c-plain",
+  cpp: "devicon-cplusplus-plain",
+  typescript: "devicon-typescript-plain",
+  nodejs: "devicon-nodejs-plain",
+  react: "devicon-react-original",
+  php: "devicon-php-plain",
+  bash: "devicon-bash-plain",
+  go: "devicon-go-plain",
+  ruby: "devicon-ruby-plain",
 };
 
-// CHANGE: helper to mask email/full name to initials
-// const getInitials = (s) => {
-//   if (!s || typeof s !== "string") return "A";
-//   let name = s;
-//   if (s.includes("@")) {
-//     name = s.split("@")[0]; // take local part
-//   }
-//   // split by non-letters and take first two tokens
-//   const parts = name.replace(/[^a-zA-Z]+/g, " ").trim().split(" ").filter(Boolean);
-//   const a = parts[0]?.[0] || name[0];
-//   const b = parts[1]?.[0] || "";
-//   return (a + b).toUpperCase();
-// };
-
-const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) => {
+const SnippetCard = ({
+  snippet,
+  isAdmin = true,
+  isDashboard = true,
+  onUpdate,
+}) => {
   const [showDescription, setShowDescription] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -54,11 +67,15 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(formData.code || "");
-    setCopied(true);
-    toast.success("Code copied"); // CHANGE: avoid inline text that shifts layout
-    setTimeout(() => setCopied(false), 1500);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(formData.code || "");
+      toast.success("Code copied");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("Copy failed");
+    }
   };
 
   const handleChange = (field, value) => {
@@ -78,6 +95,7 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
       setEditing(false);
       onUpdate?.(updated);
     } catch (err) {
+      console.log(err);
       toast.error("Failed to update snippet");
     }
   };
@@ -94,6 +112,7 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
         toast.success("Deleted successfully");
         onUpdate?.();
       } catch (err) {
+        console.log(err);
         toast.error("Failed to delete");
       }
     }
@@ -103,7 +122,11 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
   const getInitials = (s) => {
     if (!s || typeof s !== "string") return "A";
     let name = s.includes("@") ? s.split("@")[0] : s;
-    const parts = name.replace(/[^a-zA-Z]+/g, " ").trim().split(" ").filter(Boolean);
+    const parts = name
+      .replace(/[^a-zA-Z]+/g, " ")
+      .trim()
+      .split(" ")
+      .filter(Boolean);
     const a = parts[0]?.[0] || name[0];
     const b = parts[1]?.[0] || "";
     return (a + b).toUpperCase();
@@ -111,17 +134,43 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
 
   // (Optional) Mask an email like j***@g***.com
   const maskEmail = (email) => {
-    if (!email || typeof email !== "string" || !email.includes("@")) return email || "";
+    if (!email || typeof email !== "string" || !email.includes("@"))
+      return email || "";
     const [local, domainFull] = email.split("@");
     const [domain, ...rest] = domainFull.split(".");
     const tld = rest.length ? rest.join(".") : "";
     const safeLocal = local ? `${local[0]}***` : "***";
     const safeDomain = domain ? `${domain[0]}***` : "***";
-    return tld ? `${safeLocal}@${safeDomain}.${tld}` : `${safeLocal}@${safeDomain}`;
+    return tld
+      ? `${safeLocal}@${safeDomain}.${tld}`
+      : `${safeLocal}@${safeDomain}`;
   };
 
-  // CHANGE: derived display values
-  const createdAtSafe = formData?.createdAt ? new Date(formData.createdAt) : null;
+  useEffect(() => {
+    setFormData(snippet);
+  }, [snippet]);
+
+  const SyntaxHighlighter = lazy(() =>
+    import("react-syntax-highlighter").then((m) => ({
+      default: m.Prism,
+    }))
+  );
+
+  useEffect(() => {
+    if (showModal) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [showModal]);
+
+  const createdAtSafe = formData?.createdAt
+    ? new Date(formData.createdAt)
+    : null;
   const initials = getInitials(formData?.createdBy);
 
   return (
@@ -130,18 +179,22 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
         "relative p-5 space-y-4 transition-all",
         "bg-base-200 backdrop-blur-xl border border-base-content/5",
         "rounded-2xl shadow-lg ring-1 ring-base-300/40",
-        "hover:shadow-xl hover:-translate-y-0.5"
+        "hover:shadow-xl hover:-translate-y-0.5",
       ].join(" ")}
     >
       {/* language badge */}
       <div className="absolute top-3 right-4 flex items-center gap-2">
         {LANGUAGE_ICONS[formData.language?.toLowerCase?.()] ? (
           <i
-            className={`${LANGUAGE_ICONS[formData.language.toLowerCase()]} text-2xl opacity-80`}
+            className={`${
+              LANGUAGE_ICONS[formData.language.toLowerCase()]
+            } text-2xl opacity-80`}
             title={formData.language}
           />
         ) : (
-          <span className="badge badge-neutral text-xs">{formData.language || "text"}</span>
+          <span className="badge badge-neutral text-xs">
+            {formData.language || "text"}
+          </span>
         )}
       </div>
 
@@ -189,7 +242,12 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
               style={{ minWidth: "60px" }}
             />
           ) : (
-            <span key={idx} className={`badge text-sm ${TAG_COLORS[idx % TAG_COLORS.length]} items-center gap-1`}>
+            <span
+              key={idx}
+              className={`badge text-sm ${
+                TAG_COLORS[idx % TAG_COLORS.length]
+              } items-center gap-1`}
+            >
               <HashIcon size={12} />
               {tag}
             </span>
@@ -209,7 +267,7 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
         <div
           className={[
             "relative overflow-hidden",
-            "bg-base-200/50 backdrop-blur-md"
+            "bg-base-200/50 backdrop-blur-md",
           ].join(" ")}
         >
           {/* scroll area */}
@@ -220,7 +278,7 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
                 "sticky top-0 z-10 flex justify-end gap-2 p-2",
                 "bg-base-200",
                 "border-none",
-                "pointer-events-none"
+                "pointer-events-none",
               ].join(" ")}
             >
               <button
@@ -242,16 +300,22 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
             </div>
 
             {/* code */}
-            <SyntaxHighlighter
-              language={formData.language || "text"}
-              style={oneDark}
-              showLineNumbers
-              wrapLines
-              wrapLongLines
-              customStyle={{ backgroundColor: "transparent", padding: "0.75rem", margin: 0 }}
-            >
-              {formData.code || ""}
-            </SyntaxHighlighter>
+            <Suspense fallback={<div className="p-4">Loading preview...</div>}>
+              <SyntaxHighlighter
+                language={formData.language || "text"}
+                style={oneDark}
+                showLineNumbers
+                wrapLines
+                wrapLongLines
+                customStyle={{
+                  backgroundColor: "transparent",
+                  padding: "0.75rem",
+                  margin: 0,
+                }}
+              >
+                {formData.code || ""}
+              </SyntaxHighlighter>
+            </Suspense>
           </div>
         </div>
       )}
@@ -262,7 +326,12 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
           onClick={() => setShowDescription((v) => !v)}
           className="flex items-center gap-1 text-sm text-primary font-medium mt-1 hover:underline"
         >
-          Description {showDescription ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          Description{" "}
+          {showDescription ? (
+            <ChevronUp size={16} />
+          ) : (
+            <ChevronDown size={16} />
+          )}
         </button>
 
         {showDescription && (
@@ -286,10 +355,18 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
       {/* Save / Cancel */}
       {editing && (
         <div className="flex justify-end gap-2 mt-2">
-          <button className="btn btn-xs btn-success btn-circle" onClick={handleSave} aria-label="Save">
+          <button
+            className="btn btn-xs btn-success btn-circle"
+            onClick={handleSave}
+            aria-label="Save"
+          >
             <Save size={14} />
           </button>
-          <button className="btn btn-xs btn-ghost btn-circle" onClick={handleCancel} aria-label="Cancel">
+          <button
+            className="btn btn-xs btn-ghost btn-circle"
+            onClick={handleCancel}
+            aria-label="Cancel"
+          >
             <X size={14} />
           </button>
         </div>
@@ -308,9 +385,10 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
             Posted by: {maskEmail(formData?.createdBy)}
           </p>
         </div>
-        <p>{format(new Date(formData.createdAt), "dd MMM yyyy, hh:mm a")}</p>
+        <p>
+          {createdAtSafe ? format(createdAtSafe, "dd MMM yyyy, hh:mm a") : "—"}
+        </p>
       </div>
-
 
       {/* Modal (glassy backdrop) */}
       {showModal &&
@@ -325,16 +403,25 @@ const SnippetCard = ({ snippet, isAdmin = true, isDashboard = true, onUpdate }) 
                 ✕
               </button>
               <div className="overflow-auto max-h-[80vh] rounded-lg ring-1 ring-base-300/50 bg-base-200/50">
-                <SyntaxHighlighter
-                  language={formData.language || "text"}
-                  style={oneDark}
-                  showLineNumbers
-                  wrapLines
-                  wrapLongLines
-                  customStyle={{ background: "transparent", color: "inherit", padding: "1rem", margin: 0 }}
+                <Suspense
+                  fallback={<div className="p-4">Loading preview...</div>}
                 >
-                  {formData.code || ""}
-                </SyntaxHighlighter>
+                  <SyntaxHighlighter
+                    language={formData.language || "text"}
+                    style={oneDark}
+                    showLineNumbers
+                    wrapLines
+                    wrapLongLines
+                    customStyle={{
+                      background: "transparent",
+                      color: "inherit",
+                      padding: "1rem",
+                      margin: 0,
+                    }}
+                  >
+                    {formData.code || ""}
+                  </SyntaxHighlighter>
+                </Suspense>
               </div>
             </div>
           </div>,

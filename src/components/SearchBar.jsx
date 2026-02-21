@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, XCircle } from "lucide-react";
 
 const SearchBar = ({ snippets, onFilter }) => {
@@ -16,7 +16,7 @@ const SearchBar = ({ snippets, onFilter }) => {
       if (token.startsWith("#")) {
         filters.tags.push(token.slice(1));
       } else if (token.startsWith("lang:")) {
-        filters.language = token.slice(5);
+        filters.language = token.slice(5).split(",");
       } else {
         filters.searchText.push(token);
       }
@@ -29,33 +29,38 @@ const SearchBar = ({ snippets, onFilter }) => {
     const parsed = parseSearch(input);
 
     const result = snippets.filter((s) => {
+      const text = `${s.title} ${s.description} ${s.code}`.toLowerCase();
+      const tags = (s.tags || []).map((t) => t.toLowerCase());
+      const language = s.language?.toLowerCase();
+
       const searchMatch = parsed.searchText.every((term) =>
-        [s.title, s.description, s.code]
-          .join(" ")
-          .toLowerCase()
-          .includes(term.toLowerCase())
+        text.includes(term.toLowerCase())
       );
 
-      const langMatch = parsed.language
-        ? s.language?.toLowerCase() === parsed.language.toLowerCase()
+      const langMatch = parsed.language.length
+        ? parsed.language.includes(language)
         : true;
 
       const tagMatch = parsed.tags.length
-        ? parsed.tags.every((tag) =>
-            s.tags.map((t) => t.toLowerCase()).includes(tag.toLowerCase())
-          )
+        ? parsed.tags.every((tag) => tags.includes(tag.toLowerCase()))
         : true;
 
       return searchMatch && langMatch && tagMatch;
     });
-
     onFilter(result);
   };
 
   const handleClear = () => {
     setInput("");
-    onFilter(snippets);
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleSearch();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [input, snippets]);
 
   return (
     <div className="relative w-full sm:max-w-sm">
