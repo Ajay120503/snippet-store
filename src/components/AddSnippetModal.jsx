@@ -147,7 +147,7 @@ const AddSnippetModal = ({ onClose, onSuccess }) => {
                     className="text-error font-bold"
                     onClick={() => handleRemoveTag(idx)}
                   >
-                    ×
+                    <X size={10} />
                   </button>
                 </div>
               ))}
