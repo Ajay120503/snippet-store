@@ -48,7 +48,7 @@ const SnippetCard = ({
 }) => {
   const [showDescription, setShowDescription] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [setCopied] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState(snippet);
 
@@ -81,12 +81,31 @@ const SnippetCard = ({
 
   /* ================= COPY ================= */
   const handleCopy = useCallback(async () => {
+    const text = formData.code || "";
+
     try {
-      await navigator.clipboard.writeText(formData.code || "");
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      }
+
       setCopied(true);
       toast.success("Copied!");
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
+
+      setTimeout(() => {
+        setCopied(false);
+      }, 1500);
+    } catch (err) {
+      console.error("Clipboard error:", err);
       toast.error("Copy failed");
     }
   }, [formData.code]);
