@@ -265,24 +265,56 @@ const SnippetCard = ({
       {/* MODAL */}
       {showModal &&
         createPortal(
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">
-            <div className="bg-base-100 rounded-xl p-4 w-11/12 max-w-3xl">
-              <button
-                className="btn btn-sm btn-circle absolute right-4"
-                onClick={() => setShowModal(false)}
-              >
-                ✕
-              </button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-6">
+            {/* Modal Container */}
+            <div
+              className="
+          relative w-full h-full
+          sm:h-auto sm:max-h-[85vh]
+          sm:max-w-4xl
+          bg-base-100
+          rounded-none sm:rounded-2xl
+          shadow-2xl
+          flex flex-col
+          overflow-hidden
+        "
+            >
+              {/* Header (sticky) */}
+              <div className="flex items-center justify-between p-3 bg-base-300 sticky top-0 z-10">
+                <h3 className="font-semibold text-sm sm:text-base">
+                  Code Preview
+                </h3>
 
-              <Suspense fallback={<div>Loading preview...</div>}>
-                <SyntaxHighlighter
-                  language={formData.language || "text"}
-                  style={oneDark}
-                  showLineNumbers
+                <button
+                  className="btn btn-sm btn-circle btn-ghost"
+                  onClick={() => setShowModal(false)}
                 >
-                  {formData.code || ""}
-                </SyntaxHighlighter>
-              </Suspense>
+                  ✕
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-auto">
+                <Suspense
+                  fallback={
+                    <div className="p-6 text-center">Loading preview...</div>
+                  }
+                >
+                  <SyntaxHighlighter
+                    language={formData.language || "text"}
+                    style={oneDark}
+                    showLineNumbers
+                    wrapLongLines
+                    customStyle={{
+                      margin: 0,
+                      background: "transparent",
+                      padding: "1rem",
+                    }}
+                  >
+                    {formData.code || ""}
+                  </SyntaxHighlighter>
+                </Suspense>
+              </div>
             </div>
           </div>,
           document.body
