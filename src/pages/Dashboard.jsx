@@ -5,14 +5,11 @@ import AddSnippetModal from "../components/AddSnippetModal";
 import SearchBar from "../components/SearchBar";
 import { ExpandIcon, Grid2X2Check } from "lucide-react";
 
-const ITEMS_PER_PAGE = 6;
-
 const Dashboard = () => {
   const [snippets, setSnippets] = useState([]);
   const [filteredSnippets, setFilteredSnippets] = useState([]);
   const [sortBy] = useState("createdAt");
   const [view, setView] = useState("grid");
-  const [page, setPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -31,10 +28,6 @@ const Dashboard = () => {
     fetchSnippets();
   }, []);
 
-  useEffect(() => {
-    setPage(1);
-  }, [sortBy]);
-
   const handleDelete = async (id) => {
     if (!confirm("Delete this snippet?")) return;
 
@@ -51,9 +44,11 @@ const Dashboard = () => {
 
   const handleSave = async (updatedSnippet) => {
     const res = await updateSnippet(updatedSnippet._id, updatedSnippet);
+
     setSnippets((prev) =>
       prev.map((s) => (s._id === updatedSnippet._id ? res : s))
     );
+
     setFilteredSnippets((prev) =>
       prev.map((s) => (s._id === updatedSnippet._id ? res : s))
     );
@@ -70,17 +65,12 @@ const Dashboard = () => {
     });
   }, [filteredSnippets, sortBy]);
 
-  const totalPages = Math.ceil(sortedSnippets.length / ITEMS_PER_PAGE);
-  const paginated = sortedSnippets.slice(
-    (page - 1) * ITEMS_PER_PAGE,
-    page * ITEMS_PER_PAGE
-  );
-
   return (
     <div className="container mx-auto px-4 py-24 space-y-6 thin-scrollbar auto-hide-scrollbar">
       {/* Header */}
       <div className="flex flex-wrap justify-between items-center gap-4">
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Dashboard</h1>
+
         <button
           aria-label="Add Snippet"
           className="btn btn-sm btn-outline"
@@ -94,14 +84,12 @@ const Dashboard = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <SearchBar
           snippets={snippets}
-          onFilter={(result) => {
-            setFilteredSnippets(result);
-            setPage(1);
-          }}
+          onFilter={(result) => setFilteredSnippets(result)}
         />
 
         <div className="flex items-center gap-2">
           <label className="text-sm text-gray-600">View:</label>
+
           <div className="flex gap-1">
             <button
               className={`btn btn-xs sm:btn-sm btn-circle ${
@@ -111,6 +99,7 @@ const Dashboard = () => {
             >
               <Grid2X2Check size={16} />
             </button>
+
             <button
               className={`btn btn-xs sm:btn-sm btn-circle ${
                 view === "list" ? "btn-primary" : "btn-ghost"
@@ -126,7 +115,7 @@ const Dashboard = () => {
       {/* Snippet List */}
       {loading ? (
         <p className="text-center text-gray-500">Loading snippets...</p>
-      ) : paginated.length ? (
+      ) : sortedSnippets.length ? (
         <div
           className={
             view === "grid"
@@ -134,7 +123,7 @@ const Dashboard = () => {
               : "space-y-4"
           }
         >
-          {paginated.map((snippet) => (
+          {sortedSnippets.map((snippet) => (
             <SnippetCard
               key={snippet._id}
               snippet={snippet}
@@ -147,23 +136,6 @@ const Dashboard = () => {
         </div>
       ) : (
         <p className="text-gray-500 text-center">No snippets found.</p>
-      )}
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="join flex flex-wrap justify-center gap-2 mt-4">
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => setPage(i + 1)}
-              className={`join-item btn btn-sm ${
-                page === i + 1 ? "btn-primary" : "btn-outline"
-              }`}
-            >
-              {i + 1}
-            </button>
-          ))}
-        </div>
       )}
 
       {/* Modal */}
