@@ -1,4 +1,11 @@
-import { useState, useRef, useEffect, lazy, Suspense } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  lazy,
+  Suspense,
+  useCallback,
+} from "react";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import {
   ChevronDown,
@@ -16,6 +23,13 @@ import { createPortal } from "react-dom";
 import { updateSnippet, deleteSnippet } from "../services/api.js";
 import toast from "react-hot-toast";
 
+/* ================= FIX 1: lazy OUTSIDE component ================= */
+const SyntaxHighlighter = lazy(() =>
+  import("react-syntax-highlighter").then((m) => ({
+    default: m.Prism,
+  }))
+);
+
 const TAG_COLORS = [
   "badge-primary",
   "badge-secondary",
@@ -26,23 +40,6 @@ const TAG_COLORS = [
   "badge-error",
 ];
 
-const LANGUAGE_ICONS = {
-  javascript: "devicon-javascript-plain",
-  python: "devicon-python-plain",
-  html: "devicon-html5-plain",
-  css: "devicon-css3-plain",
-  java: "devicon-java-plain",
-  c: "devicon-c-plain",
-  cpp: "devicon-cplusplus-plain",
-  typescript: "devicon-typescript-plain",
-  nodejs: "devicon-nodejs-plain",
-  react: "devicon-react-original",
-  php: "devicon-php-plain",
-  bash: "devicon-bash-plain",
-  go: "devicon-go-plain",
-  ruby: "devicon-ruby-plain",
-};
-
 const SnippetCard = ({
   snippet,
   isAdmin = true,
@@ -51,178 +48,112 @@ const SnippetCard = ({
 }) => {
   const [showDescription, setShowDescription] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [formData, setFormData] = useState({ ...snippet });
+  const [formData, setFormData] = useState(snippet);
 
   const dropdownRef = useRef(null);
 
+  /* ================= SAFE STATE SYNC ================= */
   useEffect(() => {
-    const handleClickOutside = (e) => {
+    setFormData(snippet);
+  }, [snippet]);
+
+  /* ================= CLICK OUTSIDE ONLY WHEN OPEN ================= */
+  useEffect(() => {
+    if (!showDescription) return;
+
+    const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setShowDescription(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
-  const handleCopy = async () => {
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showDescription]);
+
+  /* ================= BODY SCROLL LOCK ================= */
+  useEffect(() => {
+    document.body.style.overflow = showModal ? "hidden" : "";
+    return () => (document.body.style.overflow = "");
+  }, [showModal]);
+
+  /* ================= COPY ================= */
+  const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(formData.code || "");
-      toast.success("Code copied");
       setCopied(true);
+      toast.success("Copied!");
       setTimeout(() => setCopied(false), 1500);
     } catch {
       toast.error("Copy failed");
     }
-  };
+  }, [formData.code]);
 
-  const handleChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  /* ================= FORM CHANGE ================= */
+  const handleChange = (field, value) =>
+    setFormData((p) => ({ ...p, [field]: value }));
 
-  const handleTagChange = (idx, value) => {
-    const updatedTags = [...(formData.tags || [])];
-    updatedTags[idx] = value;
-    handleChange("tags", updatedTags);
-  };
-
+  /* ================= SAVE ================= */
   const handleSave = async () => {
     try {
       const updated = await updateSnippet(formData._id, formData);
       toast.success("Snippet updated");
       setEditing(false);
       onUpdate?.(updated);
-    } catch (err) {
-      console.log(err);
-      toast.error("Failed to update snippet");
+    } catch {
+      toast.error("Update failed");
     }
   };
 
-  const handleCancel = () => {
-    setFormData(snippet);
-    setEditing(false);
-  };
-
+  /* ================= DELETE ================= */
   const handleDelete = async () => {
-    if (confirm("Are you sure you want to delete this snippet?")) {
-      try {
-        await deleteSnippet(snippet._id);
-        toast.success("Deleted successfully");
-        onUpdate?.();
-      } catch (err) {
-        console.log(err);
-        toast.error("Failed to delete");
-      }
+    if (!confirm("Delete this snippet?")) return;
+
+    try {
+      await deleteSnippet(formData._id);
+      toast.success("Deleted");
+      onUpdate?.();
+    } catch {
+      toast.error("Delete failed");
     }
   };
 
-  // Get initials from a name or email
-  const getInitials = (s) => {
-    if (!s || typeof s !== "string") return "A";
-    let name = s.includes("@") ? s.split("@")[0] : s;
-    const parts = name
-      .replace(/[^a-zA-Z]+/g, " ")
-      .trim()
-      .split(" ")
-      .filter(Boolean);
-    const a = parts[0]?.[0] || name[0];
-    const b = parts[1]?.[0] || "";
-    return (a + b).toUpperCase();
-  };
-
-  // (Optional) Mask an email like j***@g***.com
-  const maskEmail = (email) => {
-    if (!email || typeof email !== "string" || !email.includes("@"))
-      return email || "";
-    const [local, domainFull] = email.split("@");
-    const [domain, ...rest] = domainFull.split(".");
-    const tld = rest.length ? rest.join(".") : "";
-    const safeLocal = local ? `${local[0]}***` : "***";
-    const safeDomain = domain ? `${domain[0]}***` : "***";
-    return tld
-      ? `${safeLocal}@${safeDomain}.${tld}`
-      : `${safeLocal}@${safeDomain}`;
-  };
-
-  useEffect(() => {
-    setFormData(snippet);
-  }, [snippet]);
-
-  const SyntaxHighlighter = lazy(() =>
-    import("react-syntax-highlighter").then((m) => ({
-      default: m.Prism,
-    }))
-  );
-
-  useEffect(() => {
-    if (showModal) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [showModal]);
+  /* ================= HELPERS ================= */
+  const initials = formData?.createdBy?.[0]?.toUpperCase?.() ?? "A";
 
   const createdAtSafe = formData?.createdAt
     ? new Date(formData.createdAt)
     : null;
-  const initials = getInitials(formData?.createdBy);
 
+  /* ================= UI ================= */
   return (
-    <div
-      className={[
-        "relative p-5 space-y-4 transition-all",
-        "bg-base-200 backdrop-blur-xl border border-base-content/5",
-        "rounded-2xl shadow-lg ring-1 ring-base-300/40",
-        "hover:shadow-xl hover:-translate-y-0.5",
-      ].join(" ")}
-    >
-      {/* language badge */}
-      <div className="absolute top-3 right-4 flex items-center gap-2">
-        {LANGUAGE_ICONS[formData.language?.toLowerCase?.()] ? (
-          <i
-            className={`${
-              LANGUAGE_ICONS[formData.language.toLowerCase()]
-            } text-2xl opacity-80`}
-            title={formData.language}
-          />
-        ) : (
-          <span className="badge badge-neutral text-xs">
-            {formData.language || "text"}
-          </span>
-        )}
-      </div>
-
-      {/* Title + actions */}
-      <div className="flex justify-between items-start gap-3 pt-6">
+    <div className="relative p-5 space-y-4 bg-base-200 rounded-2xl shadow-md hover:shadow-xl transition-all">
+      {/* HEADER */}
+      <div className="flex justify-between items-start gap-3">
         {editing ? (
           <input
-            type="text"
-            className="w-full bg-transparent text-lg font-medium px-2 py-1 border-b border-base-300 focus:outline-none focus:border-primary"
+            className="input input-sm w-full"
             value={formData.title || ""}
             onChange={(e) => handleChange("title", e.target.value)}
           />
         ) : (
-          <h2 className="text-xl font-semibold leading-7">{formData.title}</h2>
+          <h2 className="text-lg font-semibold">{formData.title}</h2>
         )}
+
         {isAdmin && isDashboard && (
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             <button
-              onClick={() => setEditing(!editing)}
-              className="btn btn-xs btn-circle btn-ghost"
-              aria-label={editing ? "Stop editing" : "Edit snippet"}
+              className="btn btn-xs btn-ghost btn-circle"
+              onClick={() => setEditing((v) => !v)}
             >
               {editing ? <X size={14} /> : <Pencil size={14} />}
             </button>
+
             <button
+              className="btn btn-xs btn-circle btn-ghost text-error"
               onClick={handleDelete}
-              className="btn btn-xs btn-ghost btn-circle text-error"
-              aria-label="Delete snippet"
             >
               <Trash2 size={14} />
             </button>
@@ -230,205 +161,128 @@ const SnippetCard = ({
         )}
       </div>
 
-      {/* Tags */}
+      {/* TAGS */}
       <div className="flex flex-wrap gap-2">
-        {(formData.tags || []).map((tag, idx) =>
-          editing ? (
-            <input
-              key={idx}
-              value={tag}
-              onChange={(e) => handleTagChange(idx, e.target.value)}
-              className="bg-base-200/70 px-2 py-1 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-              style={{ minWidth: "60px" }}
-            />
-          ) : (
-            <span
-              key={idx}
-              className={`badge text-sm ${
-                TAG_COLORS[idx % TAG_COLORS.length]
-              } items-center gap-1`}
-            >
-              <HashIcon size={12} />
-              {tag}
-            </span>
-          )
-        )}
+        {(formData.tags || []).map((tag, i) => (
+          <span
+            key={i}
+            className={`badge ${TAG_COLORS[i % TAG_COLORS.length]}`}
+          >
+            <HashIcon size={10} />
+            {tag}
+          </span>
+        ))}
       </div>
 
-      {/* Code with sticky toolbar */}
-      {editing ? (
-        <textarea
-          className="w-full bg-base-200/70 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-          rows={6}
-          value={formData.code || ""}
-          onChange={(e) => handleChange("code", e.target.value)}
-        />
-      ) : (
-        <div
-          className={[
-            "relative overflow-hidden",
-            "bg-base-200/50 backdrop-blur-md",
-          ].join(" ")}
-        >
-          {/* scroll area */}
-          <div className="max-h-64 overflow-auto">
-            {/* CHANGE: sticky toolbar that stays while scrolling */}
-            <div
-              className={[
-                "sticky top-0 z-10 flex justify-end gap-2 p-2",
-                "bg-base-200",
-                "border-none",
-                "pointer-events-none",
-              ].join(" ")}
-            >
-              <button
-                className="btn btn-xs btn-circle btn-outline pointer-events-auto"
-                onClick={handleCopy}
-                aria-label="Copy code"
-                title={copied ? "Copied!" : "Copy"}
-              >
-                <ClipboardCopy size={14} />
-              </button>
-              <button
-                className="btn btn-xs btn-circle btn-outline pointer-events-auto"
-                onClick={() => setShowModal(true)}
-                aria-label="Open preview"
-                title="Preview"
-              >
-                <Eye size={14} />
-              </button>
-            </div>
+      {/* CODE BLOCK */}
+      <div className="relative rounded-lg overflow-hidden bg-base-300/40">
+        {/* Sticky toolbar */}
+        <div className="sticky top-0 flex justify-end gap-2 p-2 bg-base-200 z-10">
+          <button
+            className="btn btn-xs btn-circle btn-outline"
+            onClick={handleCopy}
+          >
+            <ClipboardCopy size={14} />
+          </button>
 
-            {/* code */}
-            <Suspense
-              fallback={
-                <div className="p-4 text-center">Loading preview...</div>
-              }
-            >
-              <SyntaxHighlighter
-                language={formData.language || "text"}
-                style={oneDark}
-                showLineNumbers
-                wrapLines
-                wrapLongLines
-                customStyle={{
-                  backgroundColor: "transparent",
-                  padding: "0.75rem",
-                  margin: 0,
-                }}
-              >
-                {formData.code || ""}
-              </SyntaxHighlighter>
-            </Suspense>
-          </div>
+          <button
+            className="btn btn-xs btn-circle btn-outline"
+            onClick={() => setShowModal(true)}
+          >
+            <Eye size={14} />
+          </button>
         </div>
-      )}
 
-      {/* Description (height-limited so other cards don't jump) */}
-      <div className="relative" ref={dropdownRef}>
+        <div className="max-h-64 overflow-auto">
+          <Suspense fallback={<div className="p-4">Loading...</div>}>
+            <SyntaxHighlighter
+              language={formData.language || "text"}
+              style={oneDark}
+              showLineNumbers
+              wrapLongLines
+              customStyle={{
+                background: "transparent",
+                margin: 0,
+              }}
+            >
+              {formData.code || ""}
+            </SyntaxHighlighter>
+          </Suspense>
+        </div>
+      </div>
+
+      {/* DESCRIPTION */}
+      <div ref={dropdownRef}>
         <button
           onClick={() => setShowDescription((v) => !v)}
-          className="flex items-center gap-1 text-sm text-primary font-medium mt-1 hover:underline"
+          className="flex items-center gap-1 text-sm text-primary"
         >
-          Description{" "}
+          Description
           {showDescription ? (
-            <ChevronUp size={16} />
+            <ChevronUp size={14} />
           ) : (
-            <ChevronDown size={16} />
+            <ChevronDown size={14} />
           )}
         </button>
 
         {showDescription && (
-          <>
-            {editing ? (
-              <textarea
-                className="mt-2 w-full bg-base-200/70 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                value={formData.description || ""}
-                onChange={(e) => handleChange("description", e.target.value)}
-              />
-            ) : (
-              // CHANGE: cap height + internal scroll so the card height barely changes
-              <div className="mt-2 p-3 rounded-md bg-base-200/60 text-sm max-h-28 overflow-y-auto">
-                {formData.description || "—"}
-              </div>
-            )}
-          </>
+          <div className="mt-2 p-3 bg-base-300/40 rounded-md text-sm max-h-28 overflow-y-auto">
+            {formData.description || "—"}
+          </div>
         )}
       </div>
 
-      {/* Save / Cancel */}
+      {/* SAVE BUTTONS */}
       {editing && (
-        <div className="flex justify-end gap-2 mt-2">
-          <button
-            className="btn btn-xs btn-success btn-circle"
-            onClick={handleSave}
-            aria-label="Save"
-          >
+        <div className="flex justify-end gap-2">
+          <button className="btn btn-xs btn-success" onClick={handleSave}>
             <Save size={14} />
           </button>
           <button
-            className="btn btn-xs btn-ghost btn-circle"
-            onClick={handleCancel}
-            aria-label="Cancel"
+            className="btn btn-xs btn-ghost"
+            onClick={() => {
+              setFormData(snippet);
+              setEditing(false);
+            }}
           >
             <X size={14} />
           </button>
         </div>
       )}
 
-      {/* Footer */}
-      <div className="flex items-center justify-between text-xs text-base-content/60 mt-2">
+      {/* FOOTER */}
+      <div className="flex justify-between text-xs opacity-70">
         <div className="flex items-center gap-2">
-          {/* Small avatar circle with initials */}
-          <div className="h-6 w-6 rounded-full bg-primary/15 text-primary grid place-items-center text-[10px] font-semibold">
+          <div className="h-6 w-6 rounded-full bg-primary/20 grid place-items-center text-[10px] font-bold">
             {initials}
           </div>
-          <p className="font-medium">
-            {/* Posted by: {initials} */}
-            {/* Or show masked email instead of initials: */}
-            Posted by: {maskEmail(formData?.createdBy)}
-          </p>
+          Posted by user
         </div>
-        <p>
-          {createdAtSafe ? format(createdAtSafe, "dd MMM yyyy, hh:mm a") : "—"}
-        </p>
+
+        <div>{createdAtSafe ? format(createdAtSafe, "dd MMM yyyy") : "—"}</div>
       </div>
 
-      {/* Modal (glassy backdrop) */}
+      {/* MODAL */}
       {showModal &&
         createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="bg-base-100/80 backdrop-blur-xl rounded-xl shadow-2xl w-11/12 max-w-3xl p-4 relative ring-1 ring-base-300/50">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">
+            <div className="bg-base-100 rounded-xl p-4 w-11/12 max-w-3xl">
               <button
-                className="absolute top-3 right-3 btn btn-sm btn-circle"
+                className="btn btn-sm btn-circle absolute right-4"
                 onClick={() => setShowModal(false)}
-                aria-label="Close preview"
               >
                 ✕
               </button>
-              <div className="overflow-auto max-h-[80vh] rounded-lg ring-1 ring-base-300/50 bg-base-200/50">
-                <Suspense
-                  fallback={
-                    <div className="p-4 text-center">Loading preview...</div>
-                  }
+
+              <Suspense fallback={<div>Loading preview...</div>}>
+                <SyntaxHighlighter
+                  language={formData.language || "text"}
+                  style={oneDark}
+                  showLineNumbers
                 >
-                  <SyntaxHighlighter
-                    language={formData.language || "text"}
-                    style={oneDark}
-                    showLineNumbers
-                    wrapLines
-                    wrapLongLines
-                    customStyle={{
-                      background: "transparent",
-                      color: "inherit",
-                      padding: "1rem",
-                      margin: 0,
-                    }}
-                  >
-                    {formData.code || ""}
-                  </SyntaxHighlighter>
-                </Suspense>
-              </div>
+                  {formData.code || ""}
+                </SyntaxHighlighter>
+              </Suspense>
             </div>
           </div>,
           document.body
