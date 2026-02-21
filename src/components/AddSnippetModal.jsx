@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { createSnippet } from "../services/api";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 
 const AddSnippetModal = ({ onClose, onSuccess }) => {
@@ -152,8 +152,11 @@ const AddSnippetModal = ({ onClose, onSuccess }) => {
                 </div>
               ))}
 
-              <button className="btn btn-sm btn-outline" onClick={handleAddTag}>
-                + Tag
+              <button
+                className="btn btn-sm btn-outline gap-2"
+                onClick={handleAddTag}
+              >
+                <Plus fontSize={16} /> Tag
               </button>
             </div>
           </div>
