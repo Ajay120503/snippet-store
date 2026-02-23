@@ -7,35 +7,47 @@ import { useAuth } from "../hooks/useAuth";
 const Home = () => {
   const [snippets, setSnippets] = useState([]);
   const [filtered, setFiltered] = useState([]);
-  const [showSkeleton, setShowSkeleton] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const { admin } = useAuth();
 
   /* ================= FETCH SNIPPETS ================= */
- useEffect(() => {
-  let timer;
+  useEffect(() => {
+    const controller = new AbortController();
 
-  const fetchSnippets = async () => {
-    setLoading(true);
+    const fetchSnippets = async () => {
+      try {
+        setLoading(true);
 
-    // show skeleton only if loading > 150ms
-    timer = setTimeout(() => setShowSkeleton(true), 150);
+        const start = Date.now(); // track start time
 
-    try {
-      const data = await getSnippets();
-      setSnippets(data);
-      setFiltered(data);
-    } finally {
-      clearTimeout(timer);
-      setLoading(false);
-      setShowSkeleton(false);
-    }
-  };
+        const data = await getSnippets({
+          signal: controller.signal,
+        });
 
-  fetchSnippets();
+        setSnippets(data);
+        setFiltered(data);
 
-  return () => clearTimeout(timer);
-}, []);
+        // ensure skeleton visible at least 400ms
+        const elapsed = Date.now() - start;
+        const minDelay = 400;
+
+        if (elapsed < minDelay) {
+          await new Promise((res) => setTimeout(res, minDelay - elapsed));
+        }
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          console.error("Failed to fetch snippets:", error);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSnippets();
+
+    return () => controller.abort();
+  }, []);
 
   /* ================= DELETE SNIPPET ================= */
   const handleDelete = useCallback(async (id) => {
@@ -74,7 +86,7 @@ const Home = () => {
   const SkeletonGrid = () => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {[...Array(6)].map((_, i) => (
-        <div key={i} className="h-60 rounded-2xl bg-base-200 animate-pulse" />
+        <div key={i} className="h-70 rounded-2xl bg-base-200 animate-pulse" />
       ))}
     </div>
   );
@@ -93,7 +105,7 @@ const Home = () => {
       </div>
 
       {/* ===== Content ===== */}
-      {showSkeleton ? (
+      {loading ? (
         <SkeletonGrid />
       ) : filtered.length ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
