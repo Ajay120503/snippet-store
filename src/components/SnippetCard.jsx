@@ -275,7 +275,7 @@ const SnippetCard = ({
           <div className="h-6 w-6 rounded-full bg-primary/20 grid place-items-center text-[10px] font-bold">
             {initials}
           </div>
-          Posted by user
+          Posted by user {formData?.createdBy}
         </div>
 
         <div>{createdAtSafe ? format(createdAtSafe, "dd MMM yyyy") : "—"}</div>
