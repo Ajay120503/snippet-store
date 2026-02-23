@@ -7,37 +7,35 @@ import { useAuth } from "../hooks/useAuth";
 const Home = () => {
   const [snippets, setSnippets] = useState([]);
   const [filtered, setFiltered] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [showSkeleton, setShowSkeleton] = useState(false);
 
   const { admin } = useAuth();
 
   /* ================= FETCH SNIPPETS ================= */
-  useEffect(() => {
-    const controller = new AbortController();
+ useEffect(() => {
+  let timer;
 
-    const fetchSnippets = async () => {
-      try {
-        setLoading(true);
+  const fetchSnippets = async () => {
+    setLoading(true);
 
-        const data = await getSnippets({
-          signal: controller.signal,
-        });
+    // show skeleton only if loading > 150ms
+    timer = setTimeout(() => setShowSkeleton(true), 150);
 
-        setSnippets(data);
-        setFiltered(data);
-      } catch (error) {
-        if (error.name !== "AbortError") {
-          console.error("Failed to fetch snippets:", error);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
+    try {
+      const data = await getSnippets();
+      setSnippets(data);
+      setFiltered(data);
+    } finally {
+      clearTimeout(timer);
+      setLoading(false);
+      setShowSkeleton(false);
+    }
+  };
 
-    fetchSnippets();
+  fetchSnippets();
 
-    return () => controller.abort();
-  }, []);
+  return () => clearTimeout(timer);
+}, []);
 
   /* ================= DELETE SNIPPET ================= */
   const handleDelete = useCallback(async (id) => {
@@ -95,7 +93,7 @@ const Home = () => {
       </div>
 
       {/* ===== Content ===== */}
-      {loading ? (
+      {showSkeleton ? (
         <SkeletonGrid />
       ) : filtered.length ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
