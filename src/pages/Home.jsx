@@ -7,7 +7,7 @@ import { useAuth } from "../hooks/useAuth";
 const Home = () => {
   const [snippets, setSnippets] = useState([]);
   const [filtered, setFiltered] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const { admin } = useAuth();
 
